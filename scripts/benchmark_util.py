@@ -1,3 +1,5 @@
+import copy
+
 import open3d as o3d
 import os
 import logging
@@ -44,7 +46,42 @@ def read_data(feature_path, name):
   return data['points'], xyz, feat
 
 
-def do_single_pair_matching(feature_path, set_name, m, voxel_size):
+def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, alpha):
+  import quantile_assignment
+
+  feat_i_c = copy.deepcopy(feat_i).data
+  feat_j_c = copy.deepcopy(feat_j).data
+
+  xyz_i_c = copy.deepcopy(xyz_i)
+  xyz_j_c = copy.deepcopy(xyz_j)
+
+  data_indices = np.linspace(0, feat_i_c.shape[1] - 1, target_size, dtype="int")
+
+  # Sample a subset of the features
+  feat_i_c = feat_i_c[:, data_indices]
+  feat_j_c = feat_j_c[:, data_indices]
+
+  xyz_i_c = xyz_i_c.select_by_index(data_indices)
+  xyz_j_c = xyz_j_c.select_by_index(data_indices)
+
+  result = quantile_assignment.quantile_registration(feat_i_c.T,
+                                                     feat_j_c.T,
+                                                     1.0,
+                                                     False,
+                                                     alpha,
+                                                     quantile_assignment.matching_lib["hungarian_cost"])
+
+  matches, weights, alpha, k_alpha, best_q, cost = result
+
+  matches_arr = np.asarray(matches)
+  matches_arr = matches_arr.T
+  corr = o3d.utility.Vector2iVector(matches_arr)
+  result = o3d.pipelines.registration.registration_fgr_based_on_correspondence(xyz_i_c, xyz_j_c, corr,
+                                                                               o3d.pipelines.registration.FastGlobalRegistrationOption(tuple_test=True))
+
+  return result.transformation
+
+def do_single_pair_matching(feature_path, set_name, m, voxel_size, target, alpha):
   i, j, s = m
   name_i = "%s_%03d" % (set_name, i)
   name_j = "%s_%03d" % (set_name, j)
@@ -52,9 +89,9 @@ def do_single_pair_matching(feature_path, set_name, m, voxel_size):
   points_i, xyz_i, feat_i = read_data(feature_path, name_i)
   points_j, xyz_j, feat_j = read_data(feature_path, name_j)
   if len(xyz_i.points) < len(xyz_j.points):
-    trans = run_ransac(xyz_i, xyz_j, feat_i, feat_j, voxel_size)
+    trans = run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target, alpha)
   else:
-    trans = run_ransac(xyz_j, xyz_i, feat_j, feat_i, voxel_size)
+    trans = run_quantile(xyz_j, xyz_i, feat_j, feat_i, voxel_size, target, alpha)
     trans = np.linalg.inv(trans)
   ratio = compute_overlap_ratio(xyz_i, xyz_j, trans, voxel_size)
   logging.info(f"{ratio}")
