@@ -76,8 +76,15 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, alpha):
   matches_arr = np.asarray(matches)
   matches_arr = matches_arr.T
   corr = o3d.utility.Vector2iVector(matches_arr)
+
+
   result = o3d.pipelines.registration.registration_fgr_based_on_correspondence(xyz_i_c, xyz_j_c, corr,
                                                                                o3d.pipelines.registration.FastGlobalRegistrationOption(tuple_test=True))
+  # TODO: Make ICP method parameter as well
+  distance_threshold = voxel_size * 1.5
+  result = o3d.pipelines.registration.registration_icp(
+    xyz_i, xyz_j, distance_threshold, result.transformation,
+    o3d.pipelines.registration.TransformationEstimationPointToPoint(False))
 
   return result.transformation
 
