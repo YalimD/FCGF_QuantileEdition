@@ -101,14 +101,14 @@ def registration(feature_path, voxel_size, data_path):
     (see Geometric Registration Benchmark section in
     http://3dmatch.cs.princeton.edu/)
     """
-    target_size = 1000
-    alpha = 0.3
+    target_size_list =  [5000]
+    alpha_list = [0.3, 0.7]
     matching_method = "hungarian_cost"
     tuple_test = True
     icp_isPlane = True
     rmse_threshold = 0.2
 
-    number_of_processes = 16
+    number_of_processes = 12
     pool = multiprocessing.Pool(number_of_processes)
 
     output_root = os.path.join(feature_path, "results")
@@ -116,58 +116,61 @@ def registration(feature_path, voxel_size, data_path):
 
     sanity_test(data_path)
 
-    recall_list = []
-    precision_list = []
+    for target_size in target_size_list:
+        for alpha in alpha_list:
 
-    timer = Timer()
+            recall_list = []
+            precision_list = []
 
-    # List file from the extract_features_batch function
-    with open(os.path.join(feature_path, "list.txt")) as f:
-        sets = f.readlines()
-        sets = [x.strip().split() for x in sets]
-    for s in sets:
-        set_name = s[0]
-        pts_num = int(s[1])
+            timer = Timer()
 
-        matching_pairs = gen_matching_pair(pts_num)
+            # List file from the extract_features_batch function
+            with open(os.path.join(feature_path, "list.txt")) as f:
+                sets = f.readlines()
+                sets = [x.strip().split() for x in sets]
+            for s in sets:
+                set_name = s[0]
+                pts_num = int(s[1])
 
-        timer.tic()
-        parameters = [(feature_path,
-                       set_name,
-                       pair,
-                       voxel_size,
-                       target_size,
-                       matching_method,
-                       tuple_test,
-                       icp_isPlane,
-                       alpha) for pair in matching_pairs]
-        set_results = pool.map(do_single_pair_matching, parameters)
-        timer.toc()
+                matching_pairs = gen_matching_pair(pts_num)
 
-        traj = gather_results(set_results)
+                timer.tic()
+                parameters = [(feature_path,
+                               set_name,
+                               pair,
+                               voxel_size,
+                               target_size,
+                               matching_method,
+                               tuple_test,
+                               icp_isPlane,
+                               alpha) for pair in matching_pairs]
+                set_results = pool.map(do_single_pair_matching, parameters)
+                timer.toc()
 
-        logging.info(f"Writing the trajectory to {output_root}/{set_name}.log")
-        output_path = "%s.log" % (os.path.join(output_root, set_name))
-        write_trajectory(traj, output_path)
+                traj = gather_results(set_results)
 
-        # Evaluate using my implementation
-        evaluation_dir = os.path.join(data_path, set_name + "-evaluation")
-        recall, precision = evaluate_fragment_registration(output_path, evaluation_dir,
-                                                           rmse_distance_threshold=rmse_threshold)
+                logging.info(f"Writing the trajectory to {output_root}/{set_name}.log")
+                output_path = "%s.log" % (os.path.join(output_root, f"{set_name}_{str(target_size)}_{str(alpha)}"))
+                write_trajectory(traj, output_path)
 
-        recall_list.append(recall)
-        precision_list.append(precision)
+                # Evaluate using my implementation
+                evaluation_dir = os.path.join(data_path, set_name + "-evaluation")
+                recall, precision = evaluate_fragment_registration(output_path, evaluation_dir,
+                                                                   rmse_distance_threshold=rmse_threshold)
 
-    recall_avg = np.average(recall_list)
-    precision_avg = np.average(precision_list)
+                recall_list.append(recall)
+                precision_list.append(precision)
 
-    now = datetime.datetime.now()
-    now_format = now.strftime("%Y-%m-%d_%H-%M-%S")
-    with open(os.path.join(output_root, f"quantile_results_{now_format}.txt"), "w") as artifact_writer:
-        artifact_writer.write(f"Total {timer.total_time}(s) and Average {timer.avg}\n")
-        artifact_writer.write(f"Recalls: {recall_list}.\t Avg: {recall_avg}\n")
-        artifact_writer.write(f"Precisions: {precision_list}.\t Avg: {precision_avg}\n")
-        artifact_writer.write(f"Parameters {target_size} {alpha} {matching_method} {tuple_test} {icp_isPlane} {rmse_threshold}")
+            recall_avg = np.average(recall_list)
+            precision_avg = np.average(precision_list)
+
+            now = datetime.datetime.now()
+            now_format = now.strftime("%Y-%m-%d_%H-%M-%S")
+            with open(os.path.join(output_root, f"quantile_results_{target_size}_{alpha}_{now_format}.txt"), "w") as artifact_writer:
+                artifact_writer.write(f"Total {timer.total_time}(s) and Average {timer.avg}\n")
+                artifact_writer.write(f"Recalls: {recall_list}.\t Avg: {recall_avg}\n")
+                artifact_writer.write(f"Precisions: {precision_list}.\t Avg: {precision_avg}\n")
+                artifact_writer.write(f"Parameters {target_size} {alpha} {matching_method} {tuple_test} {icp_isPlane} {rmse_threshold}")
 
 
 def do_single_pair_evaluation(feature_path,

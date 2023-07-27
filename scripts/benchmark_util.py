@@ -46,7 +46,7 @@ def read_data(feature_path, name):
     return data['points'], xyz, feat
 
 
-def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, alpha):
+def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha):
     import quantile_assignment
 
     feat_i_c = copy.deepcopy(feat_i).data
@@ -69,7 +69,7 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, alpha):
                                                        1.0,
                                                        False,
                                                        alpha,
-                                                       quantile_assignment.matching_lib["hungarian_cost"])
+                                                       quantile_assignment.matching_lib[matching_method])
 
     matches, weights, alpha, k_alpha, best_q, cost = result
 
@@ -79,12 +79,16 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, alpha):
 
     result = o3d.pipelines.registration.registration_fgr_based_on_correspondence(xyz_i_c, xyz_j_c, corr,
                                                                                  o3d.pipelines.registration.FastGlobalRegistrationOption(
-                                                                                     tuple_test=True))
-    # TODO: Make ICP method parameter as well
+                                                                                     tuple_test=tuple_test))
     distance_threshold = voxel_size * 1.5
-    result = o3d.pipelines.registration.registration_icp(
-        xyz_i, xyz_j, distance_threshold, result.transformation,
-        o3d.pipelines.registration.TransformationEstimationPointToPoint(False))
+    if icp_isPlane:
+        result = o3d.pipelines.registration.registration_icp(
+            xyz_i, xyz_j, distance_threshold, result.transformation,
+            o3d.pipelines.registration.TransformationEstimationPointToPlane(False))
+    else:
+        result = o3d.pipelines.registration.registration_icp(
+            xyz_i, xyz_j, distance_threshold, result.transformation,
+            o3d.pipelines.registration.TransformationEstimationPointToPoint(False))
 
     return result.transformation
 
@@ -101,9 +105,9 @@ def do_single_pair_matching(parameters):
 
     # TODO: This shouldnt matter?
     if len(xyz_i.points) < len(xyz_j.points):
-        trans = run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, alpha)
+        trans = run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha)
     else:
-        trans = run_quantile(xyz_j, xyz_i, feat_j, feat_i, voxel_size, target_size, alpha)
+        trans = run_quantile(xyz_j, xyz_i, feat_j, feat_i, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha)
         trans = np.linalg.inv(trans)
     ratio = compute_overlap_ratio(xyz_i, xyz_j, trans, voxel_size)
     logging.info(f"{ratio}")
