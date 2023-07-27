@@ -2,6 +2,7 @@
 A collection of unrefactored functions.
 """
 import datetime
+import glob
 import os
 import sys
 import numpy as np
@@ -101,22 +102,28 @@ def registration(feature_path, voxel_size, data_path):
     (see Geometric Registration Benchmark section in
     http://3dmatch.cs.princeton.edu/)
     """
-    target_size_list =  [5000]
-    alpha_list = [0.3, 0.7]
+    target_size = 5000
+    alpha_list = [0.3, 0.5]
     matching_method = "hungarian_cost"
     tuple_test = True
-    icp_isPlane = True
     rmse_threshold = 0.2
+
+    models = glob.glob("./checkpoints/3dmatch/*", recursive=True)
 
     number_of_processes = 12
     pool = multiprocessing.Pool(number_of_processes)
 
-    output_root = os.path.join(feature_path, "results")
-    feature_path = os.path.join(feature_path, "features")
+    feature_path_root = os.path.join(feature_path, "features")
 
     sanity_test(data_path)
 
-    for target_size in target_size_list:
+    for model in models:
+
+        model_path = os.path.join(feature_path_root, os.path.splitext(os.path.basename(model))[0])
+        output_root = os.path.join(model_path, "results")
+
+        os.makedirs(output_root, exist_ok=True)
+
         for alpha in alpha_list:
 
             recall_list = []
@@ -125,7 +132,7 @@ def registration(feature_path, voxel_size, data_path):
             timer = Timer()
 
             # List file from the extract_features_batch function
-            with open(os.path.join(feature_path, "list.txt")) as f:
+            with open(os.path.join(model_path, "list.txt")) as f:
                 sets = f.readlines()
                 sets = [x.strip().split() for x in sets]
             for s in sets:
@@ -135,14 +142,13 @@ def registration(feature_path, voxel_size, data_path):
                 matching_pairs = gen_matching_pair(pts_num)
 
                 timer.tic()
-                parameters = [(feature_path,
+                parameters = [(model_path,
                                set_name,
                                pair,
                                voxel_size,
                                target_size,
                                matching_method,
                                tuple_test,
-                               icp_isPlane,
                                alpha) for pair in matching_pairs]
                 set_results = pool.map(do_single_pair_matching, parameters)
                 timer.toc()
@@ -170,7 +176,7 @@ def registration(feature_path, voxel_size, data_path):
                 artifact_writer.write(f"Total {timer.total_time}(s) and Average {timer.avg}\n")
                 artifact_writer.write(f"Recalls: {recall_list}.\t Avg: {recall_avg}\n")
                 artifact_writer.write(f"Precisions: {precision_list}.\t Avg: {precision_avg}\n")
-                artifact_writer.write(f"Parameters {target_size} {alpha} {matching_method} {tuple_test} {icp_isPlane} {rmse_threshold}")
+                artifact_writer.write(f"Parameters {target_size} {alpha} {matching_method} {tuple_test} {rmse_threshold}")
 
 
 def do_single_pair_evaluation(feature_path,

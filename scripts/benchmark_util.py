@@ -46,7 +46,7 @@ def read_data(feature_path, name):
     return data['points'], xyz, feat
 
 
-def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha):
+def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching_method, tuple_test, alpha):
     import quantile_assignment
 
     feat_i_c = copy.deepcopy(feat_i).data
@@ -81,20 +81,15 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching
                                                                                  o3d.pipelines.registration.FastGlobalRegistrationOption(
                                                                                      tuple_test=tuple_test))
     distance_threshold = voxel_size * 1.5
-    if icp_isPlane:
-        result = o3d.pipelines.registration.registration_icp(
-            xyz_i, xyz_j, distance_threshold, result.transformation,
-            o3d.pipelines.registration.TransformationEstimationPointToPlane(False))
-    else:
-        result = o3d.pipelines.registration.registration_icp(
-            xyz_i, xyz_j, distance_threshold, result.transformation,
-            o3d.pipelines.registration.TransformationEstimationPointToPoint(False))
+    result = o3d.pipelines.registration.registration_icp(
+        xyz_i, xyz_j, distance_threshold, result.transformation,
+        o3d.pipelines.registration.TransformationEstimationPointToPoint(False))
 
     return result.transformation
 
 
 def do_single_pair_matching(parameters):
-    feature_path, set_name, m, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha = parameters
+    feature_path, set_name, m, voxel_size, target_size, matching_method, tuple_test, alpha = parameters
 
     i, j, s = m
     name_i = "%s_%03d" % (set_name, i)
@@ -105,9 +100,9 @@ def do_single_pair_matching(parameters):
 
     # TODO: This shouldnt matter?
     if len(xyz_i.points) < len(xyz_j.points):
-        trans = run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha)
+        trans = run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching_method, tuple_test, alpha)
     else:
-        trans = run_quantile(xyz_j, xyz_i, feat_j, feat_i, voxel_size, target_size, matching_method, tuple_test, icp_isPlane, alpha)
+        trans = run_quantile(xyz_j, xyz_i, feat_j, feat_i, voxel_size, target_size, matching_method, tuple_test, alpha)
         trans = np.linalg.inv(trans)
     ratio = compute_overlap_ratio(xyz_i, xyz_j, trans, voxel_size)
     logging.info(f"{ratio}")
