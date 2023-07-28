@@ -25,7 +25,7 @@ import torch
 import MinkowskiEngine as ME
 
 from evaluate_3dmatch import *
-import multiprocessing
+from tqdm.contrib.concurrent import process_map
 
 ch = logging.StreamHandler(sys.stdout)
 logging.getLogger().setLevel(logging.INFO)
@@ -159,7 +159,9 @@ def registration(feature_path, voxel_size, data_path):
                                matching_method,
                                tuple_test,
                                alpha) for pair in matching_pairs]
-                set_results = pool.map(do_single_pair_matching, parameters)
+                set_results = process_map(do_single_pair_matching, parameters,
+                                          max_workers=number_of_processes,
+                                          chunksize=1)
                 timer.toc()
 
                 traj = gather_results(set_results)
