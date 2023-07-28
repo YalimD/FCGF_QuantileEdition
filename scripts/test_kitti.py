@@ -15,6 +15,7 @@ from util.pointcloud import make_open3d_point_cloud, make_open3d_feature
 from lib.timer import AverageMeter, Timer
 
 import MinkowskiEngine as ME
+from benchmark_util import *
 
 ch = logging.StreamHandler(sys.stdout)
 logging.getLogger().setLevel(logging.INFO)
@@ -37,7 +38,9 @@ def main(config):
       bn_momentum=config.bn_momentum,
       conv1_kernel_size=config.conv1_kernel_size,
       normalize_feature=config.normalize_feature)
-  checkpoint = torch.load(config.save_dir + '/checkpoint.pth')
+
+  # TODO: Ensure the weight definitions in the config file align with the one you donwloaded from the readme path
+  checkpoint = torch.load('./checkpoints/kitti_2019-07-31_19-30-19.pth')
   model.load_state_dict(checkpoint['state_dict'])
   model = model.to(device)
   model.eval()
@@ -81,19 +84,22 @@ def main(config):
     feat1 = make_open3d_feature(F1, 32, F1.shape[0])
 
     reg_timer.tic()
-    distance_threshold = config.voxel_size * 1.0
-    ransac_result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-        pcd0, pcd1, feat0, feat1, distance_threshold,
-        o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
-            o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-            o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
-        ], o3d.pipelines.registration.RANSACConvergenceCriteria(4000000, 10000))
-    T_ransac = torch.from_numpy(ransac_result.transformation.astype(np.float32))
+    # distance_threshold = config.voxel_size * 1.0
+    # ransac_result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
+    #     pcd0, pcd1, feat0, feat1, distance_threshold,
+    #     o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
+    #         o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+    #         o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
+    #     ], o3d.pipelines.registration.RANSACConvergenceCriteria(4000000, 10000))
+    # transformation = torch.from_numpy(ransac_result.transformation.astype(np.float32))
+    target = 1000
+    alpha = 0.3
+    transformation = run_quantile(pcd0, pcd1, feat0, feat1, config.voxel_size, target, alpha)
     reg_timer.toc()
 
     # Translation error
-    rte = np.linalg.norm(T_ransac[:3, 3] - T_gth[:3, 3])
-    rre = np.arccos((np.trace(T_ransac[:3, :3].t() @ T_gth[:3, :3]) - 1) / 2)
+    rte = np.linalg.norm(transformation[:3, 3] - T_gth[:3, 3])
+    rre = np.arccos((np.trace(transformation[:3, :3].t() @ T_gth[:3, :3]) - 1) / 2)
 
     # Check if the ransac was successful. successful if rte < 2m and rre < 5◦
     # http://openaccess.thecvf.com/content_ECCV_2018/papers/Zi_Jian_Yew_3DFeat-Net_Weakly_Supervised_ECCV_2018_paper.pdf
