@@ -148,6 +148,8 @@ def registration(feature_path, voxel_size, data_path):
                     logging.info(f"Passing {output_path}")
                     continue
 
+                logging.info(f"Processing {output_path}")
+
                 matching_pairs = gen_matching_pair(pts_num)
 
                 timer.tic()
@@ -177,12 +179,12 @@ def registration(feature_path, voxel_size, data_path):
                 recall_list.append(recall)
                 precision_list.append(precision)
 
-            recall_avg = np.average(recall_list)
-            precision_avg = np.average(precision_list)
-
             if len(recall_list) == 0:
                 logging.info(f"Passing {model}")
                 continue
+
+            recall_avg = np.average(recall_list)
+            precision_avg = np.average(precision_list)
 
             now = datetime.datetime.now()
             now_format = now.strftime("%Y-%m-%d_%H-%M-%S")

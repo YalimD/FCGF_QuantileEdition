@@ -98,7 +98,7 @@ def do_single_pair_matching(parameters):
     i, j, s = m
     name_i = "%s_%03d" % (set_name, i)
     name_j = "%s_%03d" % (set_name, j)
-    logging.info("matching %s %s" % (name_i, name_j))
+    logging.debug("matching %s %s" % (name_i, name_j))
     points_i, xyz_i, feat_i = read_data(feature_path, name_i)
     points_j, xyz_j, feat_j = read_data(feature_path, name_j)
 
@@ -109,7 +109,7 @@ def do_single_pair_matching(parameters):
         trans = run_quantile(xyz_j, xyz_i, feat_j, feat_i, voxel_size, target_size, matching_method, tuple_test, alpha)
         trans = np.linalg.inv(trans)
     ratio = compute_overlap_ratio(xyz_i, xyz_j, trans, voxel_size)
-    logging.info(f"{ratio}")
+    logging.debug(f"{ratio}")
     if ratio > 0.3:
         return [True, i, j, s, np.linalg.inv(trans)]
     else:
