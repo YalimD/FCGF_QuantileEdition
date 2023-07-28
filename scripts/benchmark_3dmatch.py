@@ -141,6 +141,12 @@ def registration(feature_path, voxel_size, data_path):
                 set_name = s[0]
                 pts_num = int(s[1])
 
+                log_name = os.path.join(output_root, f"{set_name}_{str(target_size)}_{str(alpha)}")
+                output_path = f"{log_name}.log"
+
+                if os.path.exists(output_path):
+                    continue
+
                 matching_pairs = gen_matching_pair(pts_num)
 
                 timer.tic()
