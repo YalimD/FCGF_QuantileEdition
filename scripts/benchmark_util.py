@@ -57,7 +57,9 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching
     xyz_j_c = copy.deepcopy(xyz_j)
 
     data_indices = np.linspace(0, feat_i_c.shape[1] - 1, min(target_size, feat_i_c.shape[1]), dtype="int")
-    assert (np.unique(data_indices).shape[0] == data_indices.shape[0])
+    if not np.unique(data_indices).shape[0] == data_indices.shape[0]:
+        logging.fatal("Downsample error")
+        return None
 
     # Sample a subset of the features
     feat_i_c = feat_i_c[:, data_indices]

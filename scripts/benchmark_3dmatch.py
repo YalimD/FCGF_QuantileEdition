@@ -145,6 +145,7 @@ def registration(feature_path, voxel_size, data_path):
                 output_path = f"{log_name}.log"
 
                 if os.path.exists(output_path):
+                    logging.info(f"Passing {output_path}")
                     continue
 
                 matching_pairs = gen_matching_pair(pts_num)
@@ -164,7 +165,6 @@ def registration(feature_path, voxel_size, data_path):
                 traj = gather_results(set_results)
 
                 logging.info(f"Writing the trajectory to {output_root}/{set_name}.log")
-                output_path = "%s.log" % (os.path.join(output_root, f"{set_name}_{str(target_size)}_{str(alpha)}"))
                 write_trajectory(traj, output_path)
 
                 # Evaluate using my implementation
@@ -177,6 +177,10 @@ def registration(feature_path, voxel_size, data_path):
 
             recall_avg = np.average(recall_list)
             precision_avg = np.average(precision_list)
+
+            if len(recall_list) == 0:
+                logging.info(f"Passing {model}")
+                continue
 
             now = datetime.datetime.now()
             now_format = now.strftime("%Y-%m-%d_%H-%M-%S")
