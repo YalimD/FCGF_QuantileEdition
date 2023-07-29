@@ -27,8 +27,8 @@ logging.basicConfig(
 
 def main(config):
   # File logs
-  target = 1000
-  alphas = [0.1, 0.3, 0.7]
+  target = 1.5
+  alphas = [0.7]
   matching_method = "hungarian_cost"
   tuple_test = True
 

@@ -107,7 +107,7 @@ def registration(feature_path, voxel_size, data_path):
     (see Geometric Registration Benchmark section in
     http://3dmatch.cs.princeton.edu/)
     """
-    target_size_list = [1000]
+    target_size_list = [0.1]
     alpha_list = [0.3]
     matching_method = "hungarian_cost"
     tuple_test = True

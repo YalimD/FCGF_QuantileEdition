@@ -56,21 +56,32 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching
     xyz_i_c = copy.deepcopy(xyz_i)
     xyz_j_c = copy.deepcopy(xyz_j)
 
-    # TODO: We shall test voxel downsampling with returned indices
-    data_indices = np.linspace(0, min(feat_i_c.shape[1] - 1, feat_j_c.shape[1] - 1), min(target_size, feat_i_c.shape[1], feat_j_c.shape[1]), dtype="int")
-    if not np.unique(data_indices).shape[0] == data_indices.shape[0]:
-        logging.fatal("Downsample error")
-        return None
+    # Temp
+    if target_size < 100:
+        i_down = xyz_i_c.voxel_down_sample_and_trace(target_size, xyz_i_c.get_min_bound(), xyz_i_c.get_max_bound())
+        xyz_i_c, data_indices, _ = i_down
+
+        # Average the features according to voxel indices, does normal average doesn't consider their weights
+        t = [voxels[voxels >= 0] for voxels in data_indices]
+        feat_i_c = np.asarray([np.average(feat_i_c[:, t[v_i]], axis=1) for v_i in range(0, len(t))])
+
+        j_down = xyz_j_c.voxel_down_sample_and_trace(target_size, xyz_j_c.get_min_bound(), xyz_j_c.get_max_bound())
+        xyz_j_c, data_indices, _ = j_down
+        t = [voxels[voxels >= 0] for voxels in data_indices]
+        feat_j_c = np.asarray([np.average(feat_j_c[:, t[v_i]], axis=1) for v_i in range(0, len(t))])
+    else:
+        data_indices = np.linspace(0, min(feat_i_c.shape[1] - 1, feat_j_c.shape[1] - 1), min(target_size, feat_i_c.shape[1], feat_j_c.shape[1]), dtype="int")
+        if not np.unique(data_indices).shape[0] == data_indices.shape[0]:
+            logging.fatal("Downsample error")
+            return None
+        feat_i_c = feat_i_c.T
+        feat_j_c = feat_j_c.T
 
     # Sample a subset of the features
-    feat_i_c = feat_i_c[:, data_indices]
-    feat_j_c = feat_j_c[:, data_indices]
 
-    xyz_i_c = xyz_i_c.select_by_index(data_indices)
-    xyz_j_c = xyz_j_c.select_by_index(data_indices)
 
-    result = quantile_assignment.quantile_registration(feat_i_c.T,
-                                                       feat_j_c.T,
+    result = quantile_assignment.quantile_registration(feat_i_c,
+                                                       feat_j_c,
                                                        1.0,
                                                        False,
                                                        alpha,
