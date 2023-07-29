@@ -77,9 +77,13 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching
         feat_i_c = feat_i_c.T
         feat_j_c = feat_j_c.T
 
+        feat_i_c = feat_i_c[data_indices, :]
+        feat_j_c = feat_j_c[data_indices, :]
+
+        xyz_i_c = xyz_i_c.select_by_index(data_indices)
+        xyz_j_c = xyz_j_c.select_by_index(data_indices)
+
     # Sample a subset of the features
-
-
     result = quantile_assignment.quantile_registration(feat_i_c,
                                                        feat_j_c,
                                                        1.0,
