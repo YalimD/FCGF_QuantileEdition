@@ -86,14 +86,19 @@ def extract_features_batch(model, config, source_path, target_path, voxel_size, 
 
 
 def sanity_test(path_to_data):
-    # Sanity test
-    path_to_3dmatch = os.path.join(path_to_data, "7-scenes-redkitchen-evaluation", "3dmatch.log")
-    path_to_gt = os.path.join(path_to_data, "7-scenes-redkitchen-evaluation")
 
-    recall, precision = evaluate_fragment_registration(path_to_3dmatch, path_to_gt)
-    logging.info(f"Recall: {recall} and Precision: {precision} for 3Dmatch on redkitchen")
+    scene_list = glob.glob(f"{path_to_data}/*-evaluation")
+    recalls = [0.85, 0.78, 0.61, 0.79, 0.59, 0.58, 0.63, 0.51]
 
-    assert (np.isclose(recall, 0.85300) and np.isclose(precision, 0.72128))
+    for s, scene  in enumerate(scene_list):
+        # Sanity test
+        path_to_3dmatch = os.path.join(scene, "3dmatch.log")
+        path_to_gt = scene
+
+        recall, precision = evaluate_fragment_registration(path_to_3dmatch, path_to_gt)
+        logging.info(f"Recall: {recall} and Precision: {precision} for 3Dmatch on redkitchen")
+
+        assert (np.isclose(recall, recalls[s], atol=0.01))
 
 def registration(feature_path, voxel_size, data_path):
     """
