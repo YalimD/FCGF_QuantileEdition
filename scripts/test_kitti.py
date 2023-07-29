@@ -1,3 +1,5 @@
+import datetime
+
 import open3d as o3d  # prevent loading error
 
 import sys
@@ -24,6 +26,29 @@ logging.basicConfig(
 
 
 def main(config):
+  # File logs
+  target = 1000
+  alphas = [0.1, 0.3, 0.7]
+  matching_method = "hungarian_cost"
+  tuple_test = True
+
+  for alpha in alphas:
+
+    now = datetime.datetime.now()
+    now_format = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+    file_handler = logging.FileHandler(os.path.join("./kitti_results",
+                                                    f"{now_format}_target{target}_alpha{alpha}_{matching_method}_tuple{tuple_test}.log"),
+                                       mode="w")
+    file_handler.setLevel(logging.INFO)
+    logging.getLogger().removeHandler(file_handler)
+    logging.getLogger().addHandler(file_handler)
+
+    run(config, (target, matching_method, tuple_test, alpha))
+
+def run(config, params):
+  target, matching_method, tuple_test, alpha = params
+
   test_loader = make_data_loader(
       config, config.test_phase, 1, num_threads=config.test_num_workers, shuffle=True)
 
@@ -84,19 +109,6 @@ def main(config):
     feat1 = make_open3d_feature(F1, 32, F1.shape[0])
 
     reg_timer.tic()
-    # distance_threshold = config.voxel_size * 1.0
-    # ransac_result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-    #     pcd0, pcd1, feat0, feat1, distance_threshold,
-    #     o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
-    #         o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
-    #         o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(distance_threshold)
-    #     ], o3d.pipelines.registration.RANSACConvergenceCriteria(4000000, 10000))
-    # transformation = torch.from_numpy(ransac_result.transformation.astype(np.float32))
-    target = 1000
-    alpha = 0.3
-    matching_method = "hungarian_cost"
-    tuple_test = True
-
     transformation = run_quantile(pcd0, pcd1, feat0, feat1, config.voxel_size, target, matching_method, tuple_test, alpha)
     reg_timer.toc()
 
