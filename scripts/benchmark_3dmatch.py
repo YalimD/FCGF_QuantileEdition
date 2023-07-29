@@ -107,16 +107,15 @@ def registration(feature_path, voxel_size, data_path):
     (see Geometric Registration Benchmark section in
     http://3dmatch.cs.princeton.edu/)
     """
-    target_size_list = [3000, 1000]
-    alpha_list = [0.3, 0.5]
+    target_size_list = [1000]
+    alpha_list = [0.3]
     matching_method = "hungarian_cost"
     tuple_test = True
     rmse_threshold = 0.2
 
     models = glob.glob("./checkpoints/3dmatch/*", recursive=True)
 
-    number_of_processes = 8
-    pool = multiprocessing.Pool(number_of_processes)
+    number_of_processes = 12
 
     feature_path_root = os.path.join(feature_path, "features")
 
