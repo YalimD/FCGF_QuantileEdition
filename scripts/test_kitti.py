@@ -40,7 +40,7 @@ def main(config):
       normalize_feature=config.normalize_feature)
 
   # TODO: Ensure the weight definitions in the config file align with the one you donwloaded from the readme path
-  checkpoint = torch.load('./checkpoints/kitti_2019-07-31_19-30-19.pth')
+  checkpoint = torch.load('./checkpoints/kitti/2019-07-31_19-30-19.pth')
   model.load_state_dict(checkpoint['state_dict'])
   model = model.to(device)
   model.eval()
@@ -57,7 +57,7 @@ def main(config):
   for i in range(len(test_iter)):
     data_timer.tic()
     try:
-      data_dict = test_iter.next()
+      data_dict = next(test_iter)
     except ValueError:
       n_gpu_failures += 1
       logging.info(f"# Erroneous GPU Pair {n_gpu_failures}")
@@ -94,8 +94,13 @@ def main(config):
     # transformation = torch.from_numpy(ransac_result.transformation.astype(np.float32))
     target = 1000
     alpha = 0.3
-    transformation = run_quantile(pcd0, pcd1, feat0, feat1, config.voxel_size, target, alpha)
+    matching_method = "hungarian_cost"
+    tuple_test = True
+
+    transformation = run_quantile(pcd0, pcd1, feat0, feat1, config.voxel_size, target, matching_method, tuple_test, alpha)
     reg_timer.toc()
+
+    transformation = torch.from_numpy(transformation.astype(np.float32))
 
     # Translation error
     rte = np.linalg.norm(transformation[:3, 3] - T_gth[:3, 3])
