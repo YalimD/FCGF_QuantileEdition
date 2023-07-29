@@ -56,7 +56,8 @@ def run_quantile(xyz_i, xyz_j, feat_i, feat_j, voxel_size, target_size, matching
     xyz_i_c = copy.deepcopy(xyz_i)
     xyz_j_c = copy.deepcopy(xyz_j)
 
-    data_indices = np.linspace(0, feat_i_c.shape[1] - 1, min(target_size, feat_i_c.shape[1]), dtype="int")
+    # TODO: We shall test voxel downsampling with returned indices
+    data_indices = np.linspace(0, min(feat_i_c.shape[1] - 1, feat_j_c.shape[1] - 1), min(target_size, feat_i_c.shape[1], feat_j_c.shape[1]), dtype="int")
     if not np.unique(data_indices).shape[0] == data_indices.shape[0]:
         logging.fatal("Downsample error")
         return None
