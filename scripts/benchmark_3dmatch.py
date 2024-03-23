@@ -107,7 +107,7 @@ def registration(feature_path, voxel_size, data_path):
     (see Geometric Registration Benchmark section in
     http://3dmatch.cs.princeton.edu/)
     """
-    target_size_list = [0.1]
+    target_size_list = [3000]
     alpha_list = [0.3]
     matching_method = "hungarian_cost"
     tuple_test = True
@@ -115,7 +115,7 @@ def registration(feature_path, voxel_size, data_path):
 
     models = glob.glob("./checkpoints/3dmatch/*", recursive=True)
 
-    number_of_processes = 12
+    number_of_processes = 8
 
     feature_path_root = os.path.join(feature_path, "features")
 
@@ -150,6 +150,12 @@ def registration(feature_path, voxel_size, data_path):
 
                 if os.path.exists(output_path):
                     logging.info(f"Passing {output_path}")
+                    evaluation_dir = os.path.join(data_path, set_name + "-evaluation")
+                    recall, precision = evaluate_fragment_registration(output_path, evaluation_dir,
+                                                                       rmse_distance_threshold=rmse_threshold)
+
+                    recall_list.append(recall)
+                    precision_list.append(precision)
                     continue
 
                 logging.info(f"Processing {output_path}")
@@ -193,7 +199,8 @@ def registration(feature_path, voxel_size, data_path):
             now = datetime.datetime.now()
             now_format = now.strftime("%Y-%m-%d_%H-%M-%S")
             with open(os.path.join(output_root, f"quantile_results_{target_size}_{alpha}_{now_format}.txt"), "w") as artifact_writer:
-                artifact_writer.write(f"Total {timer.total_time}(s) and Average {timer.avg}\n")
+                if timer.total_time > 0:
+                    artifact_writer.write(f"Total {timer.total_time}(s) and Average {timer.avg}\n")
                 artifact_writer.write(f"Recalls: {recall_list}.\t Avg: {recall_avg}\n")
                 artifact_writer.write(f"Precisions: {precision_list}.\t Avg: {precision_avg}\n")
                 artifact_writer.write(f"Parameters {target_size} {alpha} {matching_method} {tuple_test} {rmse_threshold}")
